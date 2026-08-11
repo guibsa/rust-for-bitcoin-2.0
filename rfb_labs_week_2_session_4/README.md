@@ -80,7 +80,9 @@ If it was a free function instead, the reusable default behavior tied to the `Lo
 
 `panic!`, on the other hand, is appropriate for situations that represent an internal logic bug or something that should never happen. For example: finding the library in an impossible state where an item’s `LoanStatus::OnLoan { member_id }` does not match the borrower’s borrowed_item_ids. In this case the internal consistency was violated. It could be defensible to `panic!` in this scenario. 
 
-12. Which derive did you deliberately leave off a type, and why?
+### 12. Which derive did you deliberately leave off a type, and why?
+`Item` and `Library` structs don't have a `Clone` type because is not desirable to have multiple libraries available, that could result in inconsistent states. And `Item` does not have the `Clone` type also, because `Library` fields owns items, so if we clone these items, that could lead to inconsistent behavior.
+
 
 ## Design notes
 
