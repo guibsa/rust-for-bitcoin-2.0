@@ -86,10 +86,73 @@ If it was a free function instead, the reusable default behavior tied to the `Lo
 
 ## Design notes
 
-Describe any choices you made, including how you kept an item's status and its
-borrower's list from drifting apart, and (if attempted) the optional generic
-search.
+`checkout` and `return_item` use `position()` to work with index of `items` and `members` of `Library`. This avoids having immutables and a mutables references at the same time.
+
+`filter_items` allows to filter by any rules that can be expressed as `Fn(&Item) -> bool`.
+
+
+## Experiments
+
+### Experiment A
+
+`library.add_item(item)` moves the ownership of the item to the `Library`. So, when acessing item after that, we got an error because the item has been already moved. So it's not possible to borrow it after move. It is not available anymore.
+
+```
+error[E0382]: borrow of moved value: `item`
+  --> src/main.rs:18:20
+   |
+10 |     let item = Item::new(
+   |         ---- move occurs because `item` has type `Item`, which does not implement the `Copy` trait
+...
+16 |     library.add_item(item)?;
+   |                      ---- value moved here
+17 |
+18 |     println!("{}", item.title);
+   |                    ^^^^^^^^^^ value borrowed here after move
+
+For more information about this error, try `rustc --explain E0382`.
+
+
+error: could not compile `rfb_labs_week_2_session_4` (bin "rfb_labs_week_2_session_4") due to 1 previous error
+```
+
+
+### Experiment B
+`item` holds an immutable reference to an `Item` that is inside the `Library`. This reference is immutable.
+
+This reference is kept until it is no longer necessary and that happens at `println!("{:?}", item)`. But before that, we try to call `library.checkout(1, 1, 10)`. And checkout needs a mutable reference `fn checkout(&mut self, ...)`. The compiler does not allow a mutable and an immutable reference at the same time. That is why the message `“cannot borrow library as mutable because it is also borrowed as immutable”`
+
+If the `println!` was before `checkout` the error should not occur, because the immutable reference was no longer used after the `println!`, so we can have a mutable reference alone.
+
+```
+  --> src/main.rs:23:5
+   |
+21 |     library.find_item(1)
+   |     ------- immutable borrow occurs here
+22 | };
+23 |     library.checkout(1, 1, 10);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+24 |
+25 |     println!("{:?}", item);
+   |                      ---------- immutable borrow later used here
+
+For more information about this error, try `rustc --explain E0502`.
+``` 
+
 
 ## Example output
 
-Paste the output of `cargo run` here once Part 8 is complete.
+Output of `cargo run`:
+
+``` 
+Library created
+Item created: Item 1: "Rust for Rustaceans" by Jon Gjengset | Book with 280 pages | Available
+Item added to Library
+Member created: Member { id: 1, name: "Guilherme", borrowed_item_ids: [] }
+Member registered
+Adds a member already present:
+- Error: member id 1 already exists
+Checks out an Item
+Return a Item late:
+- Late fee: 600
+``` 
